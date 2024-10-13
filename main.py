@@ -1,84 +1,117 @@
 import pygame
+import random
 import sys
 
-#to start pygame we need to initialize it
+# Initialize Pygame
 pygame.init()
 
-#Constants and important numbers
-Width = 800
-Height = 600
+# Constants
+WIDTH = 800
+HEIGHT = 600
 FPS = 60
+BLOCK_WIDTH = 50
+BLOCK_HEIGHT = 50
 
-#for each colour need to specify its number
-White = (255, 255, 255)
-Black = (0, 0, 0)
-Red = (255, 0, 0)
-Blue = (0, 0, 255)
+# Colors
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLACK = (0, 0, 0)
 
-#properties for players
-Player_width = 50
-Player_height = 100
-player_speed = 5
+# Player properties
+PLAYER_WIDTH = 50
+PLAYER_HEIGHT = 50
+PLAYER_SPEED = 5
 
-#Creating game window
-window = pygame.displya.set_mode((Width, Height))
-pygame.display.set_caption("name")
+# Create game window
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Catch the Falling Blocks")
 
-#define player class
+# Define Player class
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y, color):
+    def __init__(self):
         super().__init__()
-        self.image = pygame.Surface([Player_width, Player_height])
-        self.image.fill(color)
+        self.image = pygame.Surface([PLAYER_WIDTH, PLAYER_HEIGHT])
+        self.image.fill(RED)
         self.rect = self.image.get_rect()
-        self.rect.topleft = (x,y)
-        self.speed = player_speed
+        self.rect.x = WIDTH // 2 - PLAYER_WIDTH // 2
+        self.rect.y = HEIGHT - PLAYER_HEIGHT - 10
+        self.score = 0
 
-        def move(self, keys, left_key, right_key):
-            if keys[left_key]:
-                self.rect.x -= self.speed
-                if keys[right_key]:
-                    self.rect.x += self.speed
+    def move(self, keys):
+        if keys[pygame.K_a] and self.rect.x > 0:  # Move left
+            self.rect.x -= PLAYER_SPEED
+        if keys[pygame.K_d] and self.rect.x < WIDTH - PLAYER_WIDTH:  # Move right
+            self.rect.x += PLAYER_SPEED
 
-#create the two players
-player1 = Player(100, Height - Player_height - 50, Red)
-player2 = Player(Width - 150, Height - Player_height - 50, Blue)
+# Create a block class
+class Block(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.Surface([BLOCK_WIDTH, BLOCK_HEIGHT])
+        self.image.fill(GREEN)
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randint(0, WIDTH - BLOCK_WIDTH)
+        self.rect.y = -BLOCK_HEIGHT  # Start off-screen
 
-#Group the sprites
+    def update(self):
+        self.rect.y += 5  # Move the block down
+        if self.rect.y > HEIGHT:  # Reset if it goes off screen
+            self.rect.y = -BLOCK_HEIGHT
+            self.rect.x = random.randint(0, WIDTH - BLOCK_WIDTH)
+
+# Create player and block groups
+player = Player()
+blocks = pygame.sprite.Group()
+for _ in range(5):  # Create multiple blocks
+    block = Block()
+    blocks.add(block)
+
 all_sprites = pygame.sprite.Group()
-all_sprites.add(player1)
-all_sprites.add(player2)
+all_sprites.add(player)
+all_sprites.add(blocks)
 
-#game loop
+# Game loop
 def game_loop():
     clock = pygame.time.Clock()
+    running = True
 
-    while True:
+    while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
-#Get keypress
-keys = pygame.key.get_pressed()
+        # Get keypress
+        keys = pygame.key.get_pressed()
+        player.move(keys)
 
-#player 1 controls A and D
-player1.move(keys, pygame.K_a, pygame.K_d)
+        # Update blocks
+        blocks.update()
 
-#player 2 controls Left and Right arrow keys
-player2.move(keys, pygame.K_LEFT, pygame.K_RIGHT)
+        # Check for collisions
+        collided_blocks = pygame.sprite.spritecollide(player, blocks, False)
+        for block in collided_blocks:
+            player.score += 1  # Increase score
+            block.rect.y = -BLOCK_HEIGHT  # Reset block to the top
 
-screen.fill(White)
+        # Fill the screen
+        screen.fill(WHITE)
 
-#draw all sprites
-all_sprites.draw(screen)
+        # Draw all sprites
+        all_sprites.draw(screen)
 
-#update the display
-pygame.display.flip()
+        # Display score
+        font = pygame.font.Font(None, 36)
+        score_text = font.render(f'Score: {player.score}', True, BLACK)
+        screen.blit(score_text, (10, 10))
 
-#control the framerate
-clock.tick(FPS)
+        # Update the display
+        pygame.display.flip()
 
-#Run game
+        # Control the frame rate
+        clock.tick(FPS)
+
+# Run game
 if __name__ == "__main__":
     game_loop()
